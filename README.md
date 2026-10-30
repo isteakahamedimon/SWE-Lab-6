@@ -15,6 +15,7 @@ A modular, production-ready Personal Expense Tracker web application built with 
 - [Project Directory Structure](#project-directory-structure)
 - [Installation & Local Setup](#installation--local-setup)
 - [Running the Application](#running-the-application)
+- [CSV Export Usage](#csv-export-usage)
 - [Running Tests](#running-tests)
   - [Unit and Integration Tests](#unit-and-integration-tests)
   - [Mocking Examples (`unittest.mock`)](#mocking-examples-unittestmock)
@@ -101,7 +102,7 @@ ExpenseTrack strictly enforces a **modular, layered architecture** that cleanly 
 The application genuinely implements **three GoF design patterns** spanning two categories:
 
 ### 1. Factory Pattern (Creational)
-- **Implementation**: [`ReportFactory`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/app/patterns/factory/report_factory.py) and [`TransactionFactory`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/app/patterns/factory/transaction_factory.py)
+- **Implementation**: [`ReportFactory`](app/patterns/factory/report_factory.py) and [`TransactionFactory`](app/patterns/factory/transaction_factory.py)
 - **Role**:
   - `ReportFactory` instantiates specialized `FinancialReport` objects based on the requested report key:
     - `MonthlySummaryReport`: Calculates monthly cash flows, net balances, and savings rates.
@@ -110,14 +111,14 @@ The application genuinely implements **three GoF design patterns** spanning two 
   - `TransactionFactory` constructs validated transaction creation payloads enforcing invariant constraints (positive amount, date validity, normalized type).
 
 ### 2. Adapter Pattern (Structural)
-- **Implementation**: [`TransactionImportAdapter`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/app/patterns/adapter/csv_adapter.py)
+- **Implementation**: [`TransactionImportAdapter`](app/patterns/adapter/csv_adapter.py)
 - **Role**: External institutions and exports format transaction data differently. The adapter pattern allows ExpenseTrack to ingest disparate external formats into standard domain transaction records:
   - `SimpleCSVAdapter`: Adapts CSV files with headers `Date, Type, Category, Amount, Description`.
   - `BankStatementCSVAdapter`: Adapts financial institution bank exports with debit/credit columns (`Date, Details, Debit, Credit`), converting debits to expenses and credits to income.
   - `CSVExportAdapter`: Adapts internal SQLAlchemy `Transaction` domain entities into downloadable CSV data.
 
 ### 3. Observer Pattern (Behavioral)
-- **Implementation**: [`TransactionSubject`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/app/patterns/observer/subject.py), [`BudgetAlertObserver`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/app/patterns/observer/budget_observer.py), and [`AuditLogObserver`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/app/patterns/observer/audit_observer.py)
+- **Implementation**: [`TransactionSubject`](app/patterns/observer/subject.py), [`BudgetAlertObserver`](app/patterns/observer/budget_observer.py), and [`AuditLogObserver`](app/patterns/observer/audit_observer.py)
 - **Role**:
   - When a transaction is created, updated, or removed, `TransactionService` notifies attached observers through `TransactionSubject.notify(event, transaction)`.
   - `BudgetAlertObserver` automatically inspects whether category spending for that month has crossed the 80% warning threshold or 100% budget exceeded limit, creating user notification alerts in real-time.
@@ -251,6 +252,38 @@ http://127.0.0.1:5000/
 
 ---
 
+## CSV Export Usage
+
+### 1. Overview
+The CSV export feature allows authenticated users to download their recorded financial transactions as a standard Comma-Separated Values (`.csv`) file for spreadsheets, accounting, or backup. The export transforms internal database models into tabular text using the [`CSVExportAdapter`](app/patterns/adapter/csv_adapter.py#L108-L130).
+
+### 2. How to Access and Use
+Users can download their CSV file directly from the web interface:
+- **From the Transactions Page**: Navigate to **Transactions** (`/transactions/`) and click the **Export** button in the top action toolbar. If filters are active (e.g. filtered by transaction type), the export link preserves the `type` query parameter to export only the matching subset.
+- **From the Dashboard**: Click the **Export Transactions (CSV)** link within the **Quick Tools** card on the right sidebar.
+
+### 3. Route & Endpoint
+- **URL**: `GET /transactions/export`
+- **Controller**: `export_csv()` in [`app/routes/transactions.py`](app/routes/transactions.py#L164-L177)
+- **Access Control**: Requires authentication (`@login_required`). Data is strictly scoped to the logged-in user.
+- **Query Parameters**:
+  - `type` *(optional)*: Filter by transaction type (`income` or `expense`). Omit to export all transactions.
+- **Response**: Generates a `text/csv` attachment named `expensetrack_export_<YYYY-MM-DD>.csv`.
+
+### 4. Exported File Schema
+The exported CSV file contains a header row followed by one row per transaction:
+
+| Column | Type | Description |
+|---|---|---|
+| `ID` | Integer | Unique identifier of the transaction record |
+| `Date` | String | Transaction date formatted in ISO 8601 (`YYYY-MM-DD`) |
+| `Type` | String | Transaction type (`income` or `expense`) |
+| `Category` | String | Name of the assigned category (e.g., `Food & Groceries`, `Salary`) |
+| `Amount` | Decimal | Monetary value formatted with 2 decimal places (e.g., `45.50`) |
+| `Description` | String | Note or description entered for the transaction |
+
+---
+
 ## Running Tests
 
 The test suite contains 44 test cases covering models, repositories, business logic, design patterns, integration routes, and mocking examples.
@@ -266,13 +299,13 @@ pytest --cov=app --cov-report=term-missing
 ```
 
 ### 3. Run Mocking Demonstration Tests
-ExpenseTrack demonstrates comprehensive usage of `unittest.mock` (`MagicMock`, `patch`) in [`tests/test_mock_examples.py`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/tests/test_mock_examples.py):
+ExpenseTrack demonstrates comprehensive usage of `unittest.mock` (`MagicMock`, `patch`) in [`tests/test_mock_examples.py`](tests/test_mock_examples.py):
 ```bash
 pytest tests/test_mock_examples.py -v
 ```
 
 ### 4. Run Selenium Browser Tests
-The project is fully prepared for browser testing via Selenium WebDriver in [`tests/test_selenium.py`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/tests/test_selenium.py).
+The project is fully prepared for browser testing via Selenium WebDriver in [`tests/test_selenium.py`](tests/test_selenium.py).
 
 When Google Chrome / Chromium and `chromedriver` are installed on the system:
 ```bash
@@ -284,7 +317,7 @@ pytest tests/test_selenium.py -v
 
 ## Automated CI/CD (GitHub Actions)
 
-An automated GitHub Actions workflow is provided at [`.github/workflows/pytest.yml`](file:///Users/combinatorist/Documents/Academics/3-2/Sessional/SoftwareSessional/Lab%206/.github/workflows/pytest.yml).
+An automated GitHub Actions workflow is provided at [`.github/workflows/pytest.yml`](.github/workflows/pytest.yml).
 
 On every push or pull request to `main` or `master`, the workflow:
 1. Sets up Python environments across multiple versions (`3.11`, `3.12`, `3.13`).
