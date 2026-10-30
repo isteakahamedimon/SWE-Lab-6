@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Budgets{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Monthly Budgets</h2>
+        <p class="text-muted mb-0">Set spending limits per category and monitor your spending progress</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="GET" action="{{ url_for('budgets.index') }}" class="d-flex align-items-center gap-2">
+            <input type="month" name="month" value="{{ selected_month }}" class="form-control form-control-sm" onchange="this.form.submit()">
+        </form>
+        <a href="{{ url_for('budgets.new') }}" class="btn btn-primary btn-sm d-flex align-items-center text-nowrap">
+            <i class="bi bi-plus-circle me-1"></i> Set Budget
+        </a>
+    </div>
+</div>
+
+<!-- Budget Overview Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 card-metric">
+            <span class="metric-title">Total Budgeted</span>
+            <h3 class="metric-value text-primary mt-1 mb-0">${{ "%.2f"|format(overview.total_budget) }}</h3>
+            <span class="small text-muted mt-2">Target limit for {{ selected_month }}</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 card-metric expense">
+            <span class="metric-title">Actual Spent</span>
+            <h3 class="metric-value text-danger mt-1 mb-0">${{ "%.2f"|format(overview.total_spent) }}</h3>
+            <span class="small text-muted mt-2">{{ "%.1f"|format(overview.overall_percentage) }}% of total budget</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 card-metric {% if overview.total_remaining >= 0 %}income{% else %}expense{% endif %}">
+            <span class="metric-title">Remaining Budget</span>
+            <h3 class="metric-value {% if overview.total_remaining >= 0 %}text-success{% else %}text-danger{% endif %} mt-1 mb-0">
+                ${{ "%.2f"|format(overview.total_remaining) }}
+            </h3>
+            <span class="small text-muted mt-2">
+                {% if overview.total_remaining >= 0 %}Available to spend{% else %}Over overall budget!{% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Category Budgets List -->
+<div class="card">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-pie-chart me-2 text-primary"></i>Category Spending vs Budget</h5>
+        <span class="badge bg-secondary">{{ overview.budgets|length }} Budget(s) Defined</span>
+    </div>
+    <div class="card-body">
+        {% if overview.budgets %}
+            <div class="row g-3">
+                {% for b in overview.budgets %}
+                <div class="col-md-6">
+                    <div class="card border p-3 shadow-none bg-light-subtle">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge rounded-circle p-1 me-1" style="background-color: {{ b.category_color }};"> </span>
+                                <h6 class="fw-bold d-inline mb-0">{{ b.category_name }}</h6>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-{{ b.status_color }}">{{ b.status }}</span>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('budgets.edit', budget_id=b.id) }}" class="btn btn-outline-secondary btn-sm p-1" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('budgets.delete', budget_id=b.id) }}" class="d-inline"
+                                          onsubmit="return confirm('Delete this budget?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm p-1" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="progress mb-2" style="height: 12px;">
+                            <div class="progress-bar bg-{{ b.status_color }}" role="progressbar"
+                                 style="width: {{ [b.percentage, 100]|min }}%;"
+                                 aria-valuenow="{{ b.percentage }}" aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>Spent: <strong class="text-dark">${{ "%.2f"|format(b.spent) }}</strong> / ${{ "%.2f"|format(b.amount) }}</span>
+                            <span>
+                                {% if b.remaining >= 0 %}
+                                    <span class="text-success">${{ "%.2f"|format(b.remaining) }} left</span>
+                                {% else %}
+                                    <span class="text-danger">${{ "%.2f"|format(b.remaining|abs) }} over</span>
+                                {% endif %}
+                                ({{ "%.1f"|format(b.percentage) }}%)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="p-5 text-center text-muted">
+                <i class="bi bi-piggy-bank fs-1 d-block mb-3 text-secondary opacity-50"></i>
+                <h5>No budgets set for {{ selected_month }}</h5>
+                <p class="small text-muted mb-3">Set monthly budgets for your expense categories to prevent overspending.</p>
+                <a href="{{ url_for('budgets.new') }}" class="btn btn-primary btn-sm">Set a Budget</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

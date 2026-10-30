@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-md-7 col-lg-6 col-xl-5">
+        <div class="card shadow-lg p-4">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="display-6 text-primary mb-2">
+                        <i class="bi bi-person-plus"></i>
+                    </div>
+                    <h3 class="fw-bold">Create an Account</h3>
+                    <p class="text-muted small">Start tracking your income, expenses, and monthly budgets.</p>
+                </div>
+
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.username.label(class="form-label fw-semibold") }}
+                        {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
+                        {% for err in form.username.errors %}
+                            <div class="invalid-feedback">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label fw-semibold") }}
+                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                        {% for err in form.email.errors %}
+                            <div class="invalid-feedback">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.password.label(class="form-label fw-semibold") }}
+                            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
+                            {% for err in form.password.errors %}
+                                <div class="invalid-feedback">{{ err }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-md-6 mb-4">
+                            {{ form.confirm_password.label(class="form-label fw-semibold") }}
+                            {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else "")) }}
+                            {% for err in form.confirm_password.errors %}
+                                <div class="invalid-feedback">{{ err }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        {{ form.submit(class="btn btn-primary py-2 fw-semibold") }}
+                    </div>
+                </form>
+
+                <div class="text-center mt-3 pt-3 border-top">
+                    <p class="small text-muted mb-0">Already have an account? <a href="{{ url_for('auth.login') }}" class="text-primary text-decoration-none fw-semibold">Sign In</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

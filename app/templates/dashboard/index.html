@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Financial Overview</h2>
+        <p class="text-muted mb-0">Overview for {{ summary.current_month }} and all-time financial health</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('transactions.new') }}" class="btn btn-primary d-flex align-items-center">
+            <i class="bi bi-plus-circle me-1"></i> Add Transaction
+        </a>
+        <a href="{{ url_for('budgets.new') }}" class="btn btn-outline-secondary d-flex align-items-center">
+            <i class="bi bi-pie-chart me-1"></i> Set Budget
+        </a>
+    </div>
+</div>
+
+<!-- Key Financial Metrics Cards -->
+<div class="row g-3 mb-4">
+    <!-- All-Time Income -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="card p-3 card-metric income">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="metric-title">Total Income</span>
+                    <h3 class="metric-value text-success mt-1 mb-0">${{ "%.2f"|format(summary.all_time.income) }}</h3>
+                </div>
+                <div class="bg-success-subtle text-success p-2 rounded-3">
+                    <i class="bi bi-graph-up-arrow fs-4"></i>
+                </div>
+            </div>
+            <span class="small text-muted mt-2">All recorded earnings</span>
+        </div>
+    </div>
+
+    <!-- All-Time Expenses -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="card p-3 card-metric expense">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="metric-title">Total Expenses</span>
+                    <h3 class="metric-value text-danger mt-1 mb-0">${{ "%.2f"|format(summary.all_time.expense) }}</h3>
+                </div>
+                <div class="bg-danger-subtle text-danger p-2 rounded-3">
+                    <i class="bi bi-graph-down-arrow fs-4"></i>
+                </div>
+            </div>
+            <span class="small text-muted mt-2">All recorded spending</span>
+        </div>
+    </div>
+
+    <!-- Net Balance -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="card p-3 card-metric balance">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="metric-title">Net Balance</span>
+                    <h3 class="metric-value {% if summary.all_time.balance >= 0 %}text-primary{% else %}text-danger{% endif %} mt-1 mb-0">
+                        ${{ "%.2f"|format(summary.all_time.balance) }}
+                    </h3>
+                </div>
+                <div class="bg-primary-subtle text-primary p-2 rounded-3">
+                    <i class="bi bi-wallet2 fs-4"></i>
+                </div>
+            </div>
+            <span class="small text-muted mt-2">Income minus expenses</span>
+        </div>
+    </div>
+
+    <!-- Current Month Expenses -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="card p-3 card-metric" style="border-left-color: #ff9f1c;">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <span class="metric-title">This Month Spent</span>
+                    <h3 class="metric-value text-warning-emphasis mt-1 mb-0">${{ "%.2f"|format(summary.month_totals.expense) }}</h3>
+                </div>
+                <div class="bg-warning-subtle text-warning p-2 rounded-3">
+                    <i class="bi bi-calendar-check fs-4"></i>
+                </div>
+            </div>
+            <span class="small text-muted mt-2">Income this mo: ${{ "%.2f"|format(summary.month_totals.income) }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Dashboard Content Split -->
+<div class="row g-4">
+    <!-- Left Column: Recent Transactions & Monthly Trend -->
+    <div class="col-lg-8">
+        <!-- Recent Transactions -->
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Transactions</h5>
+                <a href="{{ url_for('transactions.index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if summary.recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Type</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in summary.recent_transactions %}
+                            <tr>
+                                <td class="text-nowrap text-muted small">{{ t.date.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    <span class="badge" style="background-color: {{ t.category.color if t.category else '#6c757d' }}; color: #fff;">
+                                        {{ t.category.name if t.category else 'Uncategorized' }}
+                                    </span>
+                                </td>
+                                <td>{{ t.description or '—' }}</td>
+                                <td>
+                                    <span class="badge {{ 'badge-income' if t.type == 'income' else 'badge-expense' }}">
+                                        {{ t.type|capitalize }}
+                                    </span>
+                                </td>
+                                <td class="text-end fw-bold {{ 'text-success' if t.type == 'income' else 'text-danger' }}">
+                                    {{ '+' if t.type == 'income' else '-' }}${{ "%.2f"|format(t.amount) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-receipt fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                    <p class="mb-2">No transactions recorded yet.</p>
+                    <a href="{{ url_for('transactions.new') }}" class="btn btn-sm btn-primary">Add your first transaction</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Monthly Trends Table -->
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-calendar3 me-2 text-primary"></i>Monthly Cash Flow History</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if summary.monthly_history %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th class="text-end">Income</th>
+                                <th class="text-end">Expenses</th>
+                                <th class="text-end">Net Savings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in summary.monthly_history %}
+                            <tr>
+                                <td class="fw-semibold">{{ m.month }}</td>
+                                <td class="text-end text-success">${{ "%.2f"|format(m.income) }}</td>
+                                <td class="text-end text-danger">${{ "%.2f"|format(m.expense) }}</td>
+                                <td class="text-end fw-bold {{ 'text-primary' if m.balance >= 0 else 'text-danger' }}">
+                                    ${{ "%.2f"|format(m.balance) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <p class="mb-0">History will appear as you record transactions across months.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Expense Category Breakdown & Quick Actions -->
+    <div class="col-lg-4">
+        <!-- Category Expense Breakdown for Current Month -->
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2 text-primary"></i>Expenses by Category</h5>
+                <span class="small text-muted">{{ summary.current_month }}</span>
+            </div>
+            <div class="card-body">
+                {% if summary.expense_breakdown %}
+                    {% set total_exp = summary.expense_breakdown|sum(attribute='total') %}
+                    {% for item in summary.expense_breakdown %}
+                        {% set pct = (item.total / total_exp * 100) if total_exp > 0 else 0 %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-semibold small">
+                                    <span class="badge rounded-circle p-1 me-1" style="background-color: {{ item.color }};"> </span>
+                                    {{ item.category }}
+                                </span>
+                                <span class="small fw-bold">${{ "%.2f"|format(item.total) }} <span class="text-muted fw-normal">({{ "%.1f"|format(pct) }}%)</span></span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ pct }}%; background-color: {{ item.color }};" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-center text-muted small my-3">No expenses recorded for this month.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Access Shortcuts -->
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-lightning-charge me-1 text-warning"></i>Quick Tools</h6>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('transactions.import_csv') }}" class="btn btn-outline-primary btn-sm text-start">
+                        <i class="bi bi-file-earmark-arrow-up me-2"></i> Import CSV Transactions
+                    </a>
+                    <a href="{{ url_for('transactions.export_csv') }}" class="btn btn-outline-secondary btn-sm text-start">
+                        <i class="bi bi-file-earmark-arrow-down me-2"></i> Export Transactions (CSV)
+                    </a>
+                    <a href="{{ url_for('reports.index') }}" class="btn btn-outline-info btn-sm text-start">
+                        <i class="bi bi-bar-chart-line me-2"></i> Generate Reports & Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

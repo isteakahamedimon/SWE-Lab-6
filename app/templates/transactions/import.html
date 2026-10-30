@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Import Transactions{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card p-4 mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold mb-1">Import Transactions via CSV</h3>
+                        <p class="text-muted small mb-0">Upload bank statements or expense sheets using the Adapter Pattern</p>
+                    </div>
+                    <a href="{{ url_for('transactions.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Back
+                    </a>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.adapter_type.label(class="form-label fw-semibold") }}
+                        {{ form.adapter_type(class="form-select" + (" is-invalid" if form.adapter_type.errors else "")) }}
+                        {% for err in form.adapter_type.errors %}
+                            <div class="invalid-feedback">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form.file.label(class="form-label fw-semibold") }}
+                        {{ form.file(class="form-control" + (" is-invalid" if form.file.errors else "")) }}
+                        {% for err in form.file.errors %}
+                            <div class="invalid-feedback">{{ err }}</div>
+                        {% endfor %}
+                        <div class="form-text small">Select a .csv file from your computer.</div>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        {{ form.submit(class="btn btn-primary py-2 fw-semibold") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Reference Information for Formats -->
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Supported CSV Formats</h5>
+
+                <div class="mb-4">
+                    <h6 class="fw-bold text-dark">1. Simple Format (Default)</h6>
+                    <p class="small text-muted mb-2">Column headers: <code>Date,Type,Category,Amount,Description</code></p>
+                    <pre class="bg-white p-2 border rounded small mb-0">Date,Type,Category,Amount,Description
+2026-10-15,expense,Food & Groceries,45.50,Supermarket
+2026-10-16,income,Freelance,350.00,Website design milestone</pre>
+                </div>
+
+                <div>
+                    <h6 class="fw-bold text-dark">2. Bank Statement Format</h6>
+                    <p class="small text-muted mb-2">Column headers: <code>Date,Details,Debit,Credit</code> (Debit = Expense, Credit = Income)</p>
+                    <pre class="bg-white p-2 border rounded small mb-0">Date,Details,Debit,Credit
+2026-10-18,Coffee Shop,5.75,
+2026-10-20,Monthly Payroll,,2800.00</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

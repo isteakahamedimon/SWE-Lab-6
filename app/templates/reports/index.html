@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Reports & Analytics</h2>
+        <p class="text-muted mb-0">Financial reporting powered by the Factory Design Pattern</p>
+    </div>
+</div>
+
+<!-- Report Selection Toolbar -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('reports.index') }}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">Select Report Type</label>
+                <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="monthly_summary" {% if report_type == 'monthly_summary' %}selected{% endif %}>Monthly Cash Flow Summary</option>
+                    <option value="category_breakdown" {% if report_type == 'category_breakdown' %}selected{% endif %}>Category Spending Breakdown</option>
+                    <option value="budget_performance" {% if report_type == 'budget_performance' %}selected{% endif %}>Budget Variance & Performance</option>
+                </select>
+            </div>
+
+            {% if report_type in ('category_breakdown', 'budget_performance') %}
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Target Month</label>
+                <input type="month" name="month" value="{{ selected_month }}" class="form-control form-control-sm" onchange="this.form.submit()">
+            </div>
+            {% endif %}
+
+            {% if report_type == 'category_breakdown' %}
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Transaction Flow</label>
+                <select name="cat_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="expense" {% if category_type == 'expense' %}selected{% endif %}>Expenses</option>
+                    <option value="income" {% if category_type == 'income' %}selected{% endif %}>Income</option>
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-arrow-repeat me-1"></i> Update
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Report Output Display -->
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% elif report %}
+<div class="card">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-bar-graph me-2 text-primary"></i>{{ report.title }}</h5>
+        <span class="badge bg-primary-subtle text-primary">{{ report.type }}</span>
+    </div>
+    <div class="card-body p-0">
+        <!-- 1. Monthly Summary Report View -->
+        {% if report.type == 'monthly_summary' %}
+            {% if report.data %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th class="text-end">Total Income</th>
+                            <th class="text-end">Total Expenses</th>
+                            <th class="text-end">Net Savings</th>
+                            <th class="text-end">Savings Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="fw-bold">{{ row.month }}</td>
+                            <td class="text-end text-success">${{ "%.2f"|format(row.income) }}</td>
+                            <td class="text-end text-danger">${{ "%.2f"|format(row.expense) }}</td>
+                            <td class="text-end fw-bold {{ 'text-primary' if row.balance >= 0 else 'text-danger' }}">
+                                ${{ "%.2f"|format(row.balance) }}
+                            </td>
+                            <td class="text-end">
+                                <span class="badge {{ 'bg-success-subtle text-success' if row.savings_rate > 0 else 'bg-secondary-subtle text-muted' }}">
+                                    {{ row.savings_rate }}%
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-5 text-center text-muted">No monthly transaction data available yet.</div>
+            {% endif %}
+        {% endif %}
+
+        <!-- 2. Category Breakdown Report View -->
+        {% if report.type == 'category_breakdown' %}
+            {% if report.data %}
+            <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                <span>Period: <strong>{{ report.month }}</strong></span>
+                <span class="fw-bold">Total: ${{ "%.2f"|format(report.total) }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-end">Share of Total</th>
+                            <th style="width: 30%;">Distribution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td>
+                                <span class="badge rounded-circle p-1 me-2" style="background-color: {{ row.color }};"> </span>
+                                <span class="fw-semibold">{{ row.category }}</span>
+                            </td>
+                            <td class="text-end fw-bold">${{ "%.2f"|format(row.amount) }}</td>
+                            <td class="text-end text-muted">{{ row.percentage }}%</td>
+                            <td>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ row.percentage }}%; background-color: {{ row.color }};"
+                                         aria-valuenow="{{ row.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-5 text-center text-muted">No data found for this period and category type.</div>
+            {% endif %}
+        {% endif %}
+
+        <!-- 3. Budget Performance Report View -->
+        {% if report.type == 'budget_performance' %}
+            {% if report.data %}
+            <div class="p-3 bg-light border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span>Month: <strong>{{ report.month }}</strong></span>
+                <div class="d-flex gap-3">
+                    <span>Budgeted: <strong>${{ "%.2f"|format(report.total_budgeted) }}</strong></span>
+                    <span>Spent: <strong class="text-danger">${{ "%.2f"|format(report.total_spent) }}</strong></span>
+                    <span>Variance: <strong class="{{ 'text-success' if report.total_variance >= 0 else 'text-danger' }}">${{ "%.2f"|format(report.total_variance) }}</strong></span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Budgeted</th>
+                            <th class="text-end">Actual Spent</th>
+                            <th class="text-end">Remaining</th>
+                            <th class="text-end">% Utilized</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in report.data %}
+                        <tr>
+                            <td class="fw-semibold">{{ row.category_name }}</td>
+                            <td class="text-end">${{ "%.2f"|format(row.budgeted) }}</td>
+                            <td class="text-end text-danger">${{ "%.2f"|format(row.spent) }}</td>
+                            <td class="text-end fw-bold {{ 'text-success' if row.remaining >= 0 else 'text-danger' }}">
+                                ${{ "%.2f"|format(row.remaining) }}
+                            </td>
+                            <td class="text-end">{{ row.percentage }}%</td>
+                            <td class="text-center">
+                                <span class="badge bg-{{ row.status_class }}">{{ row.status }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-5 text-center text-muted">No budgets configured for {{ report.month }}.</div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

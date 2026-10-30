@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Transactions</h2>
+        <p class="text-muted mb-0">Record, search, and manage your income and expenses</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('transactions.import_csv') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-upload me-1"></i> Import CSV
+        </a>
+        <a href="{{ url_for('transactions.export_csv', **request.args) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-download me-1"></i> Export
+        </a>
+        <a href="{{ url_for('transactions.new') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Add Transaction
+        </a>
+    </div>
+</div>
+
+<!-- Search & Filtering Card -->
+<div class="card mb-4">
+    <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-funnel me-1 text-primary"></i> Filter & Search</h6>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('transactions.index') }}" class="row g-3">
+            <div class="col-md-3 col-sm-6">
+                {{ filter_form.start_date.label(class="form-label small fw-semibold") }}
+                {{ filter_form.start_date(class="form-control form-control-sm", type="date") }}
+            </div>
+            <div class="col-md-3 col-sm-6">
+                {{ filter_form.end_date.label(class="form-label small fw-semibold") }}
+                {{ filter_form.end_date(class="form-control form-control-sm", type="date") }}
+            </div>
+            <div class="col-md-2 col-sm-6">
+                {{ filter_form.type.label(class="form-label small fw-semibold") }}
+                {{ filter_form.type(class="form-select form-select-sm") }}
+            </div>
+            <div class="col-md-4 col-sm-6">
+                {{ filter_form.category_id.label(class="form-label small fw-semibold") }}
+                {{ filter_form.category_id(class="form-select form-select-sm") }}
+            </div>
+            <div class="col-md-5 col-sm-12">
+                {{ filter_form.keyword.label(class="form-label small fw-semibold") }}
+                {{ filter_form.keyword(class="form-control form-control-sm") }}
+            </div>
+            <div class="col-md-3 col-sm-6">
+                {{ filter_form.sort_by.label(class="form-label small fw-semibold") }}
+                {{ filter_form.sort_by(class="form-select form-select-sm") }}
+            </div>
+            <div class="col-md-2 col-sm-6">
+                {{ filter_form.sort_order.label(class="form-label small fw-semibold") }}
+                {{ filter_form.sort_order(class="form-select form-select-sm") }}
+            </div>
+            <div class="col-md-2 col-sm-12 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-search me-1"></i> Apply
+                </button>
+                <a href="{{ url_for('transactions.index') }}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Filter Summary Totals -->
+<div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+    <span class="text-muted small">Filtered Results Summary:</span>
+    <span class="badge bg-success-subtle text-success p-2">Income: ${{ "%.2f"|format(total_income) }}</span>
+    <span class="badge bg-danger-subtle text-danger p-2">Expense: ${{ "%.2f"|format(total_expense) }}</span>
+    <span class="badge bg-primary-subtle text-primary p-2">Net: ${{ "%.2f"|format(net_filtered) }}</span>
+    <span class="text-muted small ms-auto">{{ transactions|length }} transaction(s) found</span>
+</div>
+
+<!-- Transactions Table -->
+<div class="card">
+    <div class="card-body p-0">
+        {% if transactions %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-center" style="width: 140px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td class="text-nowrap text-muted">{{ t.date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <span class="badge {{ 'badge-income' if t.type == 'income' else 'badge-expense' }}">
+                                {{ t.type|capitalize }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge" style="background-color: {{ t.category.color if t.category else '#6c757d' }}; color: #fff;">
+                                {{ t.category.name if t.category else 'Uncategorized' }}
+                            </span>
+                        </td>
+                        <td>{{ t.description or '—' }}</td>
+                        <td class="text-end fw-bold {{ 'text-success' if t.type == 'income' else 'text-danger' }}">
+                            {{ '+' if t.type == 'income' else '-' }}${{ "%.2f"|format(t.amount) }}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('transactions.edit', transaction_id=t.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('transactions.delete', transaction_id=t.id) }}" class="d-inline"
+                                      onsubmit="return confirm('Are you sure you want to delete this transaction?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-50"></i>
+            <h5>No transactions found</h5>
+            <p class="small text-muted mb-3">Try adjusting your filters or record a new transaction.</p>
+            <a href="{{ url_for('transactions.new') }}" class="btn btn-primary btn-sm">Add Transaction</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
